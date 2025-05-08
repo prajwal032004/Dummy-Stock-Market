@@ -1,0 +1,227 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1 class="mb-4">
+      <i class="fas fa-file-invoice-dollar me-2"></i> Mutual Funds
+    </h1>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="dashboard-card">
+      <h3 class="mb-3">Mutual Fund Investing</h3>
+      <p>
+        Mutual funds pool money from many investors to purchase securities. They
+        offer diversification and professional management, making them suitable
+        for long-term investment goals.
+      </p>
+      <div class="alert alert-info">
+        <i class="fas fa-info-circle me-2"></i> Note: Investing in mutual funds
+        is subject to market risks. Read all scheme related documents carefully
+        before investing.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="mb-0">Available Mutual Funds</h2>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Fund Name</th>
+                <th>Category</th>
+                <th>NAV (₹)</th>
+                <th>Risk Level</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for fund_id, fund in funds.items() %}
+              <tr>
+                <td class="fw-bold">{{ fund.name }}</td>
+                <td>{{ fund.category }}</td>
+                <td>₹{{ "%.2f"|format(fund.nav) }}</td>
+                <td>
+                  {% if fund.risk == 'Low' %}
+                  <span class="badge bg-success">{{ fund.risk }}</span>
+                  {% elif fund.risk == 'Moderate' %}
+                  <span class="badge bg-warning text-dark"
+                    >{{ fund.risk }}</span
+                  >
+                  {% else %}
+                  <span class="badge bg-danger">{{ fund.risk }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#investModal"
+                    data-fund-id="{{ fund_id }}"
+                    data-name="{{ fund.name }}"
+                    data-nav="{{ fund.nav }}"
+                  >
+                    <i class="fas fa-rupee-sign me-1"></i> Invest
+                  </button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Fund Types Explanation -->
+<div class="row mt-4">
+  <div class="col-md-4 mb-4">
+    <div class="dashboard-card h-100">
+      <h4 class="mb-3">Large Cap Funds</h4>
+      <p>
+        Large-cap funds invest primarily in large, established companies with
+        stable growth and lower risk. These funds typically offer consistent but
+        moderate returns.
+      </p>
+    </div>
+  </div>
+  <div class="col-md-4 mb-4">
+    <div class="dashboard-card h-100">
+      <h4 class="mb-3">Mid Cap Funds</h4>
+      <p>
+        Mid-cap funds invest in medium-sized companies with good growth
+        potential. These funds carry moderate risk and can offer higher returns
+        than large-cap funds.
+      </p>
+    </div>
+  </div>
+  <div class="col-md-4 mb-4">
+    <div class="dashboard-card h-100">
+      <h4 class="mb-3">Flexi Cap Funds</h4>
+      <p>
+        Flexi-cap funds have the flexibility to invest across market
+        capitalizations. This allows fund managers to adjust portfolios based on
+        market conditions, offering balanced risk-return profiles.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Invest Modal -->
+<div
+  class="modal fade"
+  id="investModal"
+  tabindex="-1"
+  aria-labelledby="investModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="investModalLabel">Invest in Mutual Fund</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <form action="{{ url_for('buy_mutual_fund') }}" method="post">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="fund-name" class="form-label">Fund</label>
+            <input type="text" class="form-control" id="fund-name" readonly />
+          </div>
+          <input type="hidden" id="fund-id" name="fund_id" />
+          <div class="mb-3">
+            <label for="invest-amount" class="form-label">Amount (₹)</label>
+            <input
+              type="number"
+              class="form-control"
+              id="invest-amount"
+              name="amount"
+              min="1000"
+              step="100"
+              required
+            />
+            <div class="form-text">Minimum investment is ₹1,000</div>
+          </div>
+          <div class="mb-3">
+            <label for="estimated-units" class="form-label"
+              >Estimated Units</label
+            >
+            <input
+              type="text"
+              class="form-control"
+              id="estimated-units"
+              readonly
+            />
+            <div class="form-text">
+              Based on current NAV of ₹<span id="current-nav"></span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">Invest</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var investModal = document.getElementById("investModal");
+    if (investModal) {
+      investModal.addEventListener("show.bs.modal", function (event) {
+        var button = event.relatedTarget;
+        var fundId = button.getAttribute("data-fund-id");
+        var name = button.getAttribute("data-name");
+        var nav = parseFloat(button.getAttribute("data-nav"));
+
+        var modalTitle = investModal.querySelector(".modal-title");
+        var fundIdInput = document.getElementById("fund-id");
+        var nameInput = document.getElementById("fund-name");
+        var amountInput = document.getElementById("invest-amount");
+        var estimatedUnitsInput = document.getElementById("estimated-units");
+        var currentNavSpan = document.getElementById("current-nav");
+
+        modalTitle.textContent = "Invest in " + name;
+        fundIdInput.value = fundId;
+        nameInput.value = name;
+        amountInput.value = 5000;
+        currentNavSpan.textContent = nav.toFixed(2);
+
+        // Calculate estimated units
+        calculateEstimatedUnits();
+
+        // Update estimated units when amount changes
+        amountInput.addEventListener("input", calculateEstimatedUnits);
+
+        function calculateEstimatedUnits() {
+          var amount = parseFloat(amountInput.value) || 0;
+          var units = amount / nav;
+          estimatedUnitsInput.value = units.toFixed(3);
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

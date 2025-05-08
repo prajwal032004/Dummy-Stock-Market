@@ -1,0 +1,154 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2><i class="fas fa-landmark me-2"></i>Stock Market</h2>
+      <div>
+        <button class="btn btn-sm btn-primary" id="refreshBtn">
+          <i class="fas fa-sync-alt me-1"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <div class="row align-items-center">
+          <div class="col-md-8">
+            <h5 class="mb-0">Indian Stocks</h5>
+          </div>
+          <div class="col-md-4">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              id="stockSearch"
+              placeholder="Search stocks..."
+            />
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Name</th>
+                <th>Sector</th>
+                <th>Price (₹)</th>
+                <th>Change</th>
+                <th>Volatility</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="stocksTable">
+              {% for symbol, stock in stocks.items() %}
+              <tr
+                data-symbol="{{ symbol }}"
+                data-name="{{ stock.name }}"
+                data-sector="{{ stock.sector }}"
+              >
+                <td><strong>{{ symbol }}</strong></td>
+                <td>{{ stock.name }}</td>
+                <td>{{ stock.sector }}</td>
+                <td class="price-cell">{{ stock.price }}</td>
+                <td
+                  class="{{ 'price-up' if stock.change > 0 else 'price-down' }}"
+                >
+                  <i
+                    class="fas fa-caret-{{ 'up' if stock.change > 0 else 'down' }} me-1"
+                  ></i>
+                  {{ stock.change }}%
+                </td>
+                <td>
+                  {% if stock.volatile %}
+                  <span class="volatile-badge">High</span>
+                  {% else %}
+                  <span class="badge bg-secondary">Normal</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a
+                    href="{{ url_for('stock_detail', symbol=symbol) }}"
+                    class="btn btn-sm btn-primary"
+                  >
+                    <i class="fas fa-chart-line me-1"></i> Details
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const stockSearch = document.getElementById("stockSearch");
+    const stocksTable = document.getElementById("stocksTable");
+    const refreshBtn = document.getElementById("refreshBtn");
+
+    // Search functionality
+    stockSearch.addEventListener("input", function () {
+      const searchTerm = this.value.toLowerCase();
+      const rows = stocksTable.querySelectorAll("tr");
+
+      rows.forEach((row) => {
+        const symbol = row.getAttribute("data-symbol").toLowerCase();
+        const name = row.getAttribute("data-name").toLowerCase();
+        const sector = row.getAttribute("data-sector").toLowerCase();
+
+        if (
+          symbol.includes(searchTerm) ||
+          name.includes(searchTerm) ||
+          sector.includes(searchTerm)
+        ) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
+      });
+    });
+
+    // Refresh button
+    refreshBtn.addEventListener("click", function () {
+      refreshStockPrices();
+    });
+
+    // Auto refresh every 30 seconds
+    setInterval(refreshStockPrices, 30000);
+  });
+
+  function refreshStockPrices() {
+    const rows = document.querySelectorAll("#stocksTable tr");
+
+    rows.forEach((row) => {
+      const symbol = row.getAttribute("data-symbol");
+      const priceCell = row.querySelector(".price-cell");
+      const changeCell = row.querySelector("td:nth-child(5)");
+
+      fetch(`/api/stock_price/${symbol}`)
+        .then((response) => response.json())
+        .then((data) => {
+          // Update price
+          priceCell.textContent = data.price;
+          priceCell.classList.add("price-flash");
+          setTimeout(() => {
+            priceCell.classList.remove("price-flash");
+          }, 1000);
+
+          // Update change
+          changeCell.innerHTML = `
+                        <i class="fas fa-caret-${
+                          data.change > 0 ? "up" : "down"
+                        } me-1"></i>
+                        ${data.change}%
+                    `;
+          changeCell.className = data.change > 0 ? "price-up" : "price-down";
+        });
+    });
+  }
+</script>
+{% endblock %}

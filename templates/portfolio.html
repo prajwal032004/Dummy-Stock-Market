@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4"><i class="fas fa-briefcase me-2"></i> My Portfolio</h1>
+    </div>
+</div>
+
+<!-- Portfolio Summary -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <h3 class="mb-3">Stocks Summary</h3>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Total Value:</span>
+                <span class="fw-bold">₹{{ "%.2f"|format(stock_total) }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Total Positions:</span>
+                <span class="fw-bold">{{ stocks|length }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="dashboard-card">
+            <h3 class="mb-3">Mutual Funds Summary</h3>
+            <div class="d-flex justify-content-between mb-2">
+                <span>Total Value:</span>
+                <span class="fw-bold">₹{{ "%.2f"|format(fund_total) }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Total Positions:</span>
+                <span class="fw-bold">{{ mutual_funds|length }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stocks -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">Stocks</h2>
+            </div>
+            <div class="card-body">
+                {% if stocks %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Name</th>
+                                <th>Quantity</th>
+                                <th>Current Price</th>
+                                <th>Total Value</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in stocks %}
+                            <tr>
+                                <td><a href="{{ url_for('stock_detail', symbol=stock.symbol) }}"
+                                        class="fw-bold text-decoration-none">{{ stock.symbol }}</a></td>
+                                <td>{{ stock.name }}</td>
+                                <td>{{ stock.quantity }}</td>
+                                <td>₹{{ "%.2f"|format(stock.price) }}</td>
+                                <td>₹{{ "%.2f"|format(stock.value) }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                                        data-bs-target="#sellStockModal" data-symbol="{{ stock.symbol }}"
+                                        data-name="{{ stock.name }}" data-max="{{ stock.quantity }}">
+                                        <i class="fas fa-rupee-sign me-1"></i> Sell
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> You don't have any stocks in your portfolio.
+                    <a href="{{ url_for('market') }}" class="alert-link">Browse the market</a> to buy stocks.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mutual Funds -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">Mutual Funds</h2>
+            </div>
+            <div class="card-body">
+                {% if mutual_funds %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Fund Name</th>
+                                <th>Units</th>
+                                <th>NAV</th>
+                                <th>Total Value</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fund in mutual_funds %}
+                            <tr>
+                                <td>{{ fund.name }}</td>
+                                <td>{{ "%.3f"|format(fund.units) }}</td>
+                                <td>₹{{ "%.2f"|format(fund.nav) }}</td>
+                                <td>₹{{ "%.2f"|format(fund.value) }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                                        data-bs-target="#sellFundModal" data-fund-id="{{ fund.id }}"
+                                        data-name="{{ fund.name }}" data-max="{{ fund.units }}">
+                                        <i class="fas fa-rupee-sign me-1"></i> Redeem
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i> You don't have any mutual funds in your portfolio.
+                    <a href="{{ url_for('mutual_funds') }}" class="alert-link">Browse the mutual funds</a> to invest.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sell Stock Modal -->
+<div class="modal fade" id="sellStockModal" tabindex="-1" aria-labelledby="sellStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sellStockModalLabel">Sell Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('sell_stock') }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="sell-stock-name" class="form-label">Stock</label>
+                        <input type="text" class="form-control" id="sell-stock-name" readonly>
+                    </div>
+                    <input type="hidden" id="sell-stock-symbol" name="symbol">
+                    <div class="mb-3">
+                        <label for="sell-stock-quantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="sell-stock-quantity" name="quantity" min="1"
+                            required>
+                        <div class="form-text">You own <span id="sell-stock-max"></span> shares</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Sell</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Sell Mutual Fund Modal -->
+<div class="modal fade" id="sellFundModal" tabindex="-1" aria-labelledby="sellFundModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sellFundModalLabel">Redeem Mutual Fund</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('sell_mutual_fund') }}" method="post">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="sell-fund-name" class="form-label">Fund</label>
+                        <input type="text" class="form-control" id="sell-fund-name" readonly>
+                    </div>
+                    <input type="hidden" id="sell-fund-id" name="fund_id">
+                    <div class="mb-3">
+                        <label for="sell-fund-units" class="form-label">Units</label>
+                        <input type="number" class="form-control" id="sell-fund-units" name="units" min="0.001"
+                            step="0.001" required>
+                        <div class="form-text">You own <span id="sell-fund-max"></span> units</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Redeem</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Sell Stock Modal
+        var sellStockModal = document.getElementById('sellStockModal');
+        if (sellStockModal) {
+            sellStockModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var symbol = button.getAttribute('data-symbol');
+                var name = button.getAttribute('data-name');
+                var max = button.getAttribute('data-max');
+
+                var modalTitle = sellStockModal.querySelector('.modal-title');
+                var symbolInput = document.getElementById('sell-stock-symbol');
+                var nameInput = document.getElementById('sell-stock-name');
+                var quantityInput = document.getElementById('sell-stock-quantity');
+                var maxSpan = document.getElementById('sell-stock-max');
+
+                modalTitle.textContent = 'Sell ' + symbol;
+                symbolInput.value = symbol;
+                nameInput.value = name;
+                quantityInput.max = max;
+                quantityInput.value = 1;
+                maxSpan.textContent = max;
+            });
+        }
+
+        // Sell Fund Modal
+        var sellFundModal = document.getElementById('sellFundModal');
+        if (sellFundModal) {
+            sellFundModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                var fundId = button.getAttribute('data-fund-id');
+                var name = button.getAttribute('data-name');
+                var max = button.getAttribute('data-max');
+
+                var modalTitle = sellFundModal.querySelector('.modal-title');
+                var fundIdInput = document.getElementById('sell-fund-id');
+                var nameInput = document.getElementById('sell-fund-name');
+                var unitsInput = document.getElementById('sell-fund-units');
+                var maxSpan = document.getElementById('sell-fund-max');
+
+                modalTitle.textContent = 'Redeem ' + name;
+                fundIdInput.value = fundId;
+                nameInput.value = name;
+                unitsInput.max = max;
+                unitsInput.value = Math.min(1, max);
+                maxSpan.textContent = parseFloat(max).toFixed(3);
+            });
+        }
+    });
+</script>
+{% endblock %}

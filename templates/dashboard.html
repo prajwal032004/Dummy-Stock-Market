@@ -1,0 +1,174 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h2 class="mb-4">Dashboard</h2>
+
+    <div class="row">
+      <div class="col-md-6 mb-4">
+        <div class="card shadow h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-wallet me-2"></i>Account Balance
+            </h5>
+          </div>
+          <div class="card-body">
+            <h3 class="text-center mb-3">
+              ₹{{ "{:,.2f}".format(cash_balance) }}
+            </h3>
+            <div class="d-grid gap-2">
+              <a href="{{ url_for('add_funds') }}" class="btn btn-success">
+                <i class="fas fa-plus-circle me-2"></i>Add Funds
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6 mb-4">
+        <div class="card shadow h-100">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-chart-pie me-2"></i>Portfolio Value
+            </h5>
+          </div>
+          <div class="card-body">
+            <h3 class="text-center mb-3">
+              ₹{{ "{:,.2f}".format(total_value) }}
+            </h3>
+            <div class="d-grid gap-2">
+              <a href="{{ url_for('portfolio_view') }}" class="btn btn-primary">
+                <i class="fas fa-briefcase me-2"></i>View Portfolio
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-12 mb-4">
+        <div class="card shadow">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+              <i class="fas fa-chart-bar me-2"></i>Asset Allocation
+            </h5>
+          </div>
+          <div class="card-body">
+            <div id="portfolioChart" class="chart-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow mb-4">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-fire me-2"></i>Top Movers</h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush" id="topMovers">
+          <div class="d-flex justify-content-center p-4">
+            <div class="spinner-border loading-spinner" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('market') }}" class="btn btn-outline-primary">
+            <i class="fas fa-search me-2"></i>Browse Market
+          </a>
+          <a
+            href="{{ url_for('mutual_funds') }}"
+            class="btn btn-outline-primary"
+          >
+            <i class="fas fa-file-invoice-dollar me-2"></i>Explore Mutual Funds
+          </a>
+          <a
+            href="{{ url_for('transactions') }}"
+            class="btn btn-outline-primary"
+          >
+            <i class="fas fa-history me-2"></i>View Transaction History
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      // Asset allocation chart
+      const options = {
+          series: [
+              {{ cash_balance }},
+              {{ stock_value }},
+              {{ mutual_fund_value }}
+          ],
+          chart: {
+              type: 'donut',
+              height: 350
+          },
+          labels: ['Cash', 'Stocks', 'Mutual Funds'],
+          colors: ['#3b82f6', '#10b981', '#f59e0b'],
+          responsive: [{
+              breakpoint: 480,
+              options: {
+                  chart: {
+                      width: 200
+                  },
+                  legend: {
+                      position: 'bottom'
+                  }
+              }
+          }]
+      };
+
+      const chart = new ApexCharts(document.querySelector("#portfolioChart"), options);
+      chart.render();
+
+      // Load top movers
+      fetchTopMovers();
+  });
+
+  function fetchTopMovers() {
+      // Simulate API call to get top movers
+      setTimeout(() => {
+          const topMoversEl = document.getElementById('topMovers');
+          topMoversEl.innerHTML = '';
+
+          {% for symbol, stock in stocks.items() %}
+              {% if loop.index <= 5 %}
+              const moversItem_{{ loop.index }} = document.createElement('div');
+              moversItem_{{ loop.index }}.className = 'list-group-item list-group-item-action';
+              moversItem_{{ loop.index }}.innerHTML = `
+                  <div class="d-flex w-100 justify-content-between align-items-center">
+                      <h6 class="mb-1">{{ symbol }}</h6>
+                      <div>
+                          <span class="fs-6 fw-bold {{ 'price-up' if stock.change > 0 else 'price-down' }}">
+                              ₹{{ stock.price }}
+                              <i class="fas fa-caret-{{ 'up' if stock.change > 0 else 'down' }} ms-1"></i>
+                              {{ stock.change }}%
+                          </span>
+                      </div>
+                  </div>
+                  <small>{{ stock.name }}</small>
+              `;
+              moversItem_{{ loop.index }}.addEventListener('click', function() {
+                  window.location.href = '{{ url_for("stock_detail", symbol=symbol) }}';
+              });
+              topMoversEl.appendChild(moversItem_{{ loop.index }});
+              {% endif %}
+          {% endfor %}
+      }, 1000);
+  }
+</script>
+{% endblock %}

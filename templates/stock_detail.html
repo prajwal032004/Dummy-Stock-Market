@@ -1,0 +1,598 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>{{ symbol }} - {{ stock.name }}</h2>
+      <a href="{{ url_for('market') }}" class="btn btn-outline-primary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Market
+      </a>
+    </div>
+
+    <div class="card shadow mb-4">
+      <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Price Chart</h5>
+          <div class="btn-group btn-group-sm" role="group">
+            <button
+              type="button"
+              class="btn btn-light active"
+              data-chart-type="candlestick"
+            >
+              Candlestick
+            </button>
+            <button type="button" class="btn btn-light" data-chart-type="bar">
+              Bar
+            </button>
+            <button type="button" class="btn btn-light" data-chart-type="line">
+              Line
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="stockChart" class="chart-container"></div>
+      </div>
+    </div>
+
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Stock Information</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Company:</strong> {{ stock.name }}</p>
+            <p><strong>Sector:</strong> {{ stock.sector }}</p>
+            <p>
+              <strong>Volatility:</strong>
+              {% if stock.volatile %}
+              <span class="badge bg-danger">High</span>
+              {% else %}
+              <span class="badge bg-secondary">Normal</span>
+              {% endif %}
+            </p>
+          </div>
+          <div class="col-md-6">
+            <p>
+              <strong>Current Price:</strong> ₹<span id="currentPrice"
+                >{{ stock.price }}</span
+              >
+            </p>
+            <p>
+              <strong>Change:</strong>
+              <span
+                id="priceChange"
+                class="{{ 'price-up' if stock.change > 0 else 'price-down' }}"
+              >
+                <i
+                  class="fas fa-caret-{{ 'up' if stock.change > 0 else 'down' }} me-1"
+                ></i>
+                {{ stock.change }}%
+              </span>
+            </p>
+            <p>
+              <strong>Last Updated:</strong>
+              <span id="lastUpdated">{{ now }}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow mb-4">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Trade</h5>
+      </div>
+      <div class="card-body">
+        <ul class="nav nav-tabs nav-fill mb-3" id="tradeTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link active"
+              id="buy-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#buy"
+              type="button"
+              role="tab"
+            >
+              Buy
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button
+              class="nav-link"
+              id="sell-tab"
+              data-bs-toggle="tab"
+              data-bs-target="#sell"
+              type="button"
+              role="tab"
+            >
+              Sell
+            </button>
+          </li>
+        </ul>
+        <div class="tab-content" id="tradeTabContent">
+          <div class="tab-pane fade show active" id="buy" role="tabpanel">
+            <form action="{{ url_for('buy_stock') }}" method="post">
+              <input type="hidden" name="symbol" value="{{ symbol }}" />
+              <div class="mb-3">
+                <label for="buyQuantity" class="form-label">Quantity</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  id="buyQuantity"
+                  name="quantity"
+                  min="1"
+                  value="1"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Estimated Cost</label>
+                <div class="input-group">
+                  <span class="input-group-text">₹</span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="buyCost"
+                    readonly
+                    value="{{ stock.price }}"
+                  />
+                </div>
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-success">
+                  <i class="fas fa-shopping-cart me-1"></i> Buy Shares
+                </button>
+              </div>
+            </form>
+          </div>
+          <div class="tab-pane fade" id="sell" role="tabpanel">
+            <form action="{{ url_for('sell_stock') }}" method="post">
+              <input type="hidden" name="symbol" value="{{ symbol }}" />
+              <div class="mb-3">
+                <label for="sellQuantity" class="form-label">Quantity</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  id="sellQuantity"
+                  name="quantity"
+                  min="1"
+                  value="1"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Estimated Value</label>
+                <div class="input-group">
+                  <span class="input-group-text">₹</span>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="sellValue"
+                    readonly
+                    value="{{ stock.price }}"
+                  />
+                </div>
+              </div>
+              <div class="d-grid">
+                <button type="submit" class="btn btn-danger">
+                  <i class="fas fa-money-bill-wave me-1"></i> Sell Shares
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Market Sentiment</h5>
+      </div>
+      <div class="card-body">
+        <div id="sentimentChart" style="height: 200px"></div>
+        <div class="text-center mt-3">
+          <div class="row">
+            <div class="col-4">
+              <div class="d-flex flex-column">
+                <span class="price-down">Bearish</span>
+                <span class="fs-4 fw-bold" id="bearishPercent">
+                  {{ (50 - stock.change)|abs|round(0, 'common') }}%
+                </span>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="d-flex flex-column">
+                <span class="text-warning">Neutral</span>
+                <span class="fs-4 fw-bold" id="neutralPercent">20%</span>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="d-flex flex-column">
+                <span class="price-up">Bullish</span>
+                <span class="fs-4 fw-bold" id="bullishPercent">
+                  {{ (30 + stock.change)|round(0, 'common') }}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-8">
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Historical Performance</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th>Change</th>
+                <th>High</th>
+                <th>Low</th>
+                <th>Avg. Volume</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1 Day</td>
+                <td
+                  class="{{ 'price-up' if stock.change > 0 else 'price-down' }}"
+                >
+                  <i
+                    class="fas fa-caret-{{ 'up' if stock.change > 0 else 'down' }} me-1"
+                  ></i>
+                  {{ stock.change }}%
+                </td>
+                <td>₹{{ (stock.price * (1 + 0.02))|round(2) }}</td>
+                <td>₹{{ (stock.price * (1 - 0.01))|round(2) }}</td>
+                <td>
+                  {{ "{:,d}".format((1000000 + 50000 * (stock.change|abs))|int)
+                  }}
+                </td>
+              </tr>
+              <tr>
+                <td>1 Week</td>
+                <td
+                  class="{{ 'price-up' if stock.change*1.5 > 0 else 'price-down' }}"
+                >
+                  <i
+                    class="fas fa-caret-{{ 'up' if stock.change*1.5 > 0 else 'down' }} me-1"
+                  ></i>
+                  {{ (stock.change * 1.5)|round(2) }}%
+                </td>
+                <td>₹{{ (stock.price * (1 + 0.05))|round(2) }}</td>
+                <td>₹{{ (stock.price * (1 - 0.03))|round(2) }}</td>
+                <td>
+                  {{ "{:,d}".format((950000 + 40000 * (stock.change|abs))|int)
+                  }}
+                </td>
+              </tr>
+              <tr>
+                <td>1 Month</td>
+                <td
+                  class="{{ 'price-up' if stock.change*3 > 0 else 'price-down' }}"
+                >
+                  <i
+                    class="fas fa-caret-{{ 'up' if stock.change*3 > 0 else 'down' }} me-1"
+                  ></i>
+                  {{ (stock.change * 3)|round(2) }}%
+                </td>
+                <td>₹{{ (stock.price * (1 + 0.08))|round(2) }}</td>
+                <td>₹{{ (stock.price * (1 - 0.06))|round(2) }}</td>
+                <td>
+                  {{ "{:,d}".format((900000 + 30000 * (stock.change|abs))|int)
+                  }}
+                </td>
+              </tr>
+              <tr>
+                <td>3 Months</td>
+                <td
+                  class="{{ 'price-up' if stock.change*5 > 0 else 'price-down' }}"
+                >
+                  <i
+                    class="fas fa-caret-{{ 'up' if stock.change*5 > 0 else 'down' }} me-1"
+                  ></i>
+                  {{ (stock.change * 5)|round(2) }}%
+                </td>
+                <td>₹{{ (stock.price * (1 + 0.12))|round(2) }}</td>
+                <td>₹{{ (stock.price * (1 - 0.09))|round(2) }}</td>
+                <td>
+                  {{ "{:,d}".format((850000 + 20000 * (stock.change|abs))|int)
+                  }}
+                </td>
+              </tr>
+              <tr>
+                <td>1 Year</td>
+                <td
+                  class="{{ 'price-up' if stock.change*10 > 0 else 'price-down' }}"
+                >
+                  <i
+                    class="fas fa-caret-{{ 'up' if stock.change*10 > 0 else 'down' }} me-1"
+                  ></i>
+                  {{ (stock.change * 10)|round(2) }}%
+                </td>
+                <td>₹{{ (stock.price * (1 + 0.20))|round(2) }}</td>
+                <td>₹{{ (stock.price * (1 - 0.15))|round(2) }}</td>
+                <td>
+                  {{ "{:,d}".format((800000 + 10000 * (stock.change|abs))|int)
+                  }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card shadow">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Analyst Recommendations</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex flex-column text-center">
+            <h6>Buy</h6>
+            <span class="fs-4 fw-bold text-success"
+              >{{ (50 + stock.change*2)|round(0, 'common') }}%</span
+            >
+          </div>
+          <div class="d-flex flex-column text-center">
+            <h6>Hold</h6>
+            <span class="fs-4 fw-bold text-warning"
+              >{{ (30 - stock.change)|round(0, 'common') }}%</span
+            >
+          </div>
+          <div class="d-flex flex-column text-center">
+            <h6>Sell</h6>
+            <span class="fs-4 fw-bold text-danger"
+              >{{ (20 - stock.change)|round(0, 'common') }}%</span
+            >
+          </div>
+        </div>
+
+        <div class="progress" style="height: 24px">
+          <div
+            class="progress-bar bg-success"
+            style="width: {{ (50 + stock.change*2)|round(0, 'common') }}%"
+            role="progressbar"
+            aria-valuenow="{{ (50 + stock.change*2)|round(0, 'common') }}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          ></div>
+          <div
+            class="progress-bar bg-warning"
+            style="width: {{ (30 - stock.change)|round(0, 'common') }}%"
+            role="progressbar"
+            aria-valuenow="{{ (30 - stock.change)|round(0, 'common') }}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          ></div>
+          <div
+            class="progress-bar bg-danger"
+            style="width: {{ (20 - stock.change)|round(0, 'common') }}%"
+            role="progressbar"
+            aria-valuenow="{{ (20 - stock.change)|round(0, 'common') }}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+          ></div>
+        </div>
+
+        <div class="alert alert-info mt-3">
+          <i class="fas fa-info-circle me-2"></i>
+          Average target price: ₹{{ (stock.price * (1 + (stock.change / 100) +
+          0.1))|round(2) }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const chartData = {{ historical_data|safe }};
+    const symbol = "{{ symbol }}";
+    const currentPrice = {{ stock.price }};
+
+    // Initialize candlestick chart
+    function initializeChart(type = 'candlestick') {
+      const formattedData = chartData.map(item => {
+        return {
+          x: new Date(item.date),
+          y: [item.open, item.high, item.low, item.close]
+        };
+      });
+
+      const options = {
+        series: [{
+          name: symbol,
+          data: formattedData
+        }],
+        chart: {
+          type: type,
+          height: 350,
+          toolbar: {
+            show: true,
+            tools: {
+              download: false,
+              selection: true,
+              zoom: true,
+              zoomin: true,
+              zoomout: true,
+              pan: true,
+            }
+          }
+        },
+        title: {
+          text: `${symbol} Stock Price`,
+          align: 'left'
+        },
+        xaxis: {
+          type: 'datetime',
+          labels: {
+            formatter: function(val) {
+              return new Date(val).toLocaleDateString();
+            }
+          }
+        },
+        yaxis: {
+          tooltip: {
+            enabled: true
+          },
+          labels: {
+            formatter: function(val) {
+              return '₹' + val.toFixed(2);
+            }
+          }
+        },
+        tooltip: {
+          y: {
+            formatter: function(val) {
+              return '₹' + val.toFixed(2);
+            }
+          }
+        }
+      };
+
+      if (type === 'line') {
+        options.chart.type = 'line';
+        options.series = [{
+          name: symbol,
+          data: chartData.map(item => ({ x: new Date(item.date), y: item.close }))
+        }];
+      } else if (type === 'bar') {
+        options.chart.type = 'bar';
+        options.series = [{
+          name: symbol,
+          data: chartData.map(item => ({ x: new Date(item.date), y: item.close }))
+        }];
+        options.plotOptions = {
+          bar: {
+            colors: {
+              ranges: [{
+                from: -100,
+                to: 0,
+                color: '#F15B46'
+              }, {
+                from: 0,
+                to: 100,
+                color: '#4CAF50'
+              }]
+            },
+            columnWidth: '80%',
+          }
+        };
+      }
+
+      document.querySelector('#stockChart').innerHTML = '';
+      const chart = new ApexCharts(document.querySelector('#stockChart'), options);
+      chart.render();
+
+      // Initialize sentiment chart
+      const sentimentOptions = {
+        series: [
+          {{ (50 - stock.change)|abs|round(0, 'common') }},
+          20,
+          {{ (30 + stock.change)|round(0, 'common') }}
+        ],
+        chart: {
+          type: 'donut',
+          height: 200
+        },
+        labels: ['Bearish', 'Neutral', 'Bullish'],
+        colors: ['#F44336', '#FFC107', '#4CAF50'],
+        legend: {
+          show: false
+        }
+      };
+
+      document.querySelector('#sentimentChart').innerHTML = '';
+      const sentimentChart = new ApexCharts(document.querySelector('#sentimentChart'), sentimentOptions);
+      sentimentChart.render();
+    }
+
+    // Initialize chart on page load
+    initializeChart();
+
+    // Handle chart type switching
+    document.querySelectorAll('[data-chart-type]').forEach(button => {
+      button.addEventListener('click', function() {
+        const chartType = this.getAttribute('data-chart-type');
+
+        // Remove active class from all buttons
+        document.querySelectorAll('[data-chart-type]').forEach(btn => {
+          btn.classList.remove('active');
+        });
+
+        // Add active class to clicked button
+        this.classList.add('active');
+
+        // Update chart
+        initializeChart(chartType);
+      });
+    });
+
+    // Update price calculations when quantity changes
+    document.getElementById('buyQuantity').addEventListener('input', function() {
+      document.getElementById('buyCost').value = (this.value * currentPrice).toFixed(2);
+    });
+
+    document.getElementById('sellQuantity').addEventListener('input', function() {
+      document.getElementById('sellValue').value = (this.value * currentPrice).toFixed(2);
+    });
+
+    // Simulate real-time price updates
+    function updatePrice() {
+      fetch(`/api/stock_price/{{ symbol }}`)
+        .then(response => response.json())
+        .then(data => {
+          const priceElement = document.getElementById('currentPrice');
+          const changeElement = document.getElementById('priceChange');
+          const lastUpdatedElement = document.getElementById('lastUpdated');
+
+          // Update price with animation
+          const oldPrice = parseFloat(priceElement.innerText);
+          const newPrice = data.price;
+          priceElement.innerText = newPrice;
+
+          if (newPrice > oldPrice) {
+            priceElement.classList.add('price-flash-up');
+            setTimeout(() => priceElement.classList.remove('price-flash-up'), 1000);
+          } else if (newPrice < oldPrice) {
+            priceElement.classList.add('price-flash-down');
+            setTimeout(() => priceElement.classList.remove('price-flash-down'), 1000);
+          }
+
+          // Update change percentage
+          const change = data.change;
+          changeElement.innerHTML = `
+            <i class="fas fa-caret-${change > 0 ? 'up' : 'down'} me-1"></i>
+            ${change}%
+          `;
+          changeElement.className = change > 0 ? 'price-up' : 'price-down';
+
+          // Update last updated time
+          lastUpdatedElement.innerText = new Date().toLocaleTimeString();
+
+          // Update buy/sell cost estimates
+          document.getElementById('buyCost').value = (document.getElementById('buyQuantity').value * newPrice).toFixed(2);
+          document.getElementById('sellValue').value = (document.getElementById('sellQuantity').value * newPrice).toFixed(2);
+        });
+    }
+
+    // Update price every 10 seconds
+    setInterval(updatePrice, 10000);
+  });
+</script>
+{% endblock %}
