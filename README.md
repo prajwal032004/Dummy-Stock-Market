@@ -102,8 +102,8 @@ MUTUAL_FUNDS = {
 ## 6. Admin Credentials (Lines 46-48)
 
 ```python
-ADMIN_USERNAME = "prajwal03"
-ADMIN_PASSWORD = "prajwal123456"
+ADMIN_USERNAME = "Admin-Prajwal"
+ADMIN_PASSWORD = "Admin0307"
 ```
 
 **What's happening:**
